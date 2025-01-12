@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"donetick.com/core/config"
+	"donetick.com/core/logging"
 	"github.com/gin-gonic/gin"
 	"github.com/ulule/limiter/v3"
 	"github.com/ulule/limiter/v3/drivers/store/memory"
@@ -67,6 +68,13 @@ func TimeoutMiddleware(timeout time.Duration) gin.HandlerFunc {
 			cancel()
 		}()
 		c.Request = c.Request.WithContext(ctx)
+		c.Next()
+	}
+}
+
+func LogMiddleware() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		logging.DefaultLogger().Infof("Request %s %s", c.Request.Method, c.Request.RequestURI)
 		c.Next()
 	}
 }

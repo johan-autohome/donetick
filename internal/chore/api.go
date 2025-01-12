@@ -135,7 +135,7 @@ func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddlewar
 
 	thingsAPI := r.Group("eapi/v1/chore")
 
-	thingsAPI.Use(utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
+	thingsAPI.Use(utils.LogMiddleware(), utils.TimeoutMiddleware(cfg.Server.WriteTimeout), utils.RateLimitMiddleware(limiter))
 	{
 		thingsAPI.GET("", api.GetAllChores)
 		thingsAPI.POST("/:id", api.PostCompleteChore)
