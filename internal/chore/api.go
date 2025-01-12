@@ -67,10 +67,20 @@ func (h *API) PostCompleteChore(c *gin.Context) {
 		return
 	}
 
+	completedDate := time.Now()
+
 	chore, err := h.choreRepo.GetChore(c, choreId)
 	if err != nil {
 		c.JSON(http.StatusNotFound, gin.H{"error": "Chore NotFound"})
 		return
+	}
+
+	// confirm that the chore in completion window:
+	if chore.CompletionWindow != nil {
+		if completedDate.After(chore.NextDueDate.Add(time.Hour * time.Duration(*chore.CompletionWindow))) {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "Chore is out of completion window"})
+			return
+		}
 	}
 
 	choreHistory, err := h.choreRepo.GetChoreHistory(c, choreId)
@@ -85,8 +95,29 @@ func (h *API) PostCompleteChore(c *gin.Context) {
 		return
 	}
 
-	completedAt := time.Now()
-	err = h.choreRepo.CompleteChore(c, chore, nil, user.ID, chore.NextDueDate, &completedAt, nextAssignedTo)
+	var nextDueDate *time.Time
+	if chore.FrequencyType == "adaptive" {
+		history, err := h.choreRepo.GetChoreHistoryWithLimit(c, chore.ID, 5)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting chore history"})
+			return
+		}
+		nextDueDate, err = scheduleAdaptiveNextDueDate(chore, completedDate, history)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error scheduling next due date"})
+			return
+		}
+
+	} else {
+		nextDueDate, err = scheduleNextDueDate(chore, completedDate)
+		if err != nil {
+
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Error scheduling next due date"})
+			return
+		}
+	}
+
+	err = h.choreRepo.CompleteChore(c, chore, nil, user.ID, nextDueDate, &completedDate, nextAssignedTo)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error completing chore"})
 		return
@@ -97,7 +128,7 @@ func (h *API) PostCompleteChore(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": "Error getting chore"})
 		return
 	}
-	c.JSON(200, chore)
+	c.JSON(http.StatusOK, chore)
 }
 
 func APIs(cfg *config.Config, api *API, r *gin.Engine, auth *jwt.GinJWTMiddleware, limiter *limiter.Limiter) {
