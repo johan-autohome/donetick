@@ -23,6 +23,9 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 	if chore.FrequencyType == "once" {
 		return nil, nil
 	}
+	if chore.FrequencyType == "adaptive" {
+		return nil, fmt.Errorf("use scheduleAdaptiveNextDueDate for adaptive frequency type")
+	}
 
 	if chore.NextDueDate != nil {
 		// no due date set, use the current date
@@ -53,12 +56,6 @@ func scheduleNextDueDate(chore *chModel.Chore, completedDate time.Time) (*time.T
 		nextDueDate = baseDate.AddDate(0, 1, 0)
 	} else if chore.FrequencyType == "yearly" {
 		nextDueDate = baseDate.AddDate(1, 0, 0)
-	} else if chore.FrequencyType == "adaptive" {
-
-		// TODO: calculate next due date based on the history of the chore
-		// calculate the difference between the due date and now in days:
-		diff := completedDate.UTC().Sub(chore.NextDueDate.UTC())
-		nextDueDate = completedDate.UTC().Add(diff)
 	} else if chore.FrequencyType == "once" {
 		// if the chore is a one-time chore, then the next due date is nil
 	} else if chore.FrequencyType == "interval" {

@@ -44,7 +44,7 @@ func (r *ChoreRepository) CreateChore(c context.Context, chore *chModel.Chore) (
 
 func (r *ChoreRepository) GetChore(c context.Context, choreID int) (*chModel.Chore, error) {
 	var chore chModel.Chore
-	if err := r.db.Debug().WithContext(c).Model(&chModel.Chore{}).Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
+	if err := r.db.WithContext(c).Model(&chModel.Chore{}).Preload("Assignees").Preload("ThingChore").Preload("LabelsV2").First(&chore, choreID).Error; err != nil {
 		return nil, err
 	}
 	return &chore, nil
@@ -121,7 +121,7 @@ func (r *ChoreRepository) CompleteChore(c context.Context, chore *chModel.Chore,
 		}
 		// Update UserCirclee Points :
 		if chore.Points != nil && *chore.Points > 0 {
-			if err := tx.Debug().Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
+			if err := tx.Model(&cModel.UserCircle{}).Where("user_id = ? AND circle_id = ?", userID, chore.CircleID).Update("points", gorm.Expr("points + ?", chore.Points)).Error; err != nil {
 				return err
 			}
 		}
@@ -210,7 +210,7 @@ func (r *ChoreRepository) GetChoresForNotification(c context.Context) ([]*chMode
 
 // func (r *ChoreReposity) GetOverdueChoresForNotification(c context.Context, overdueDuration time.Duration, everyDuration time.Duration, untilDuration time.Duration) ([]*chModel.Chore, error) {
 // 	var chores []*chModel.Chore
-// 	query := r.db.Debug().WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 2")
+// 	query := r.db.WithContext(c).Table("chores").Select("chores.*, MAX(n.created_at) as max_notification_created_at").Joins("left join notifications n on n.chore_id = chores.id and n.scheduled_for = chores.next_due_date and n.type = 2")
 // 	if err := query.Where("chores.is_active = ? and chores.notification = ? and chores.next_due_date < ? and chores.next_due_date > ?", true, true, time.Now().Add(overdueDuration).UTC(), time.Now().Add(untilDuration).UTC()).Where(readJSONBooleanField(r.dbType, "chores.notification_meta", "nagging")).Having("MAX(n.created_at) is null or MAX(n.created_at) < ?", time.Now().Add(everyDuration).UTC()).Group("chores.id").Find(&chores).Error; err != nil {
 // 		return nil, err
 // 	}
@@ -224,7 +224,7 @@ func (r *ChoreRepository) GetOverdueChoresForNotification(c context.Context, ove
 	everyTime := now.Add(-everyDuration)
 	untilTime := now.Add(-untilDuration)
 
-	query := r.db.Debug().WithContext(c).
+	query := r.db.WithContext(c).
 		Table("chores").
 		Select("chores.*, MAX(n.created_at) as max_notification_created_at").
 		Joins("left join notifications n on n.chore_id = chores.id and n.type = 2").
